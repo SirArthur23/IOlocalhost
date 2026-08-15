@@ -7,6 +7,22 @@
 Every process listening on a `localhost` port, grouped and labeled — plus one-click
 start/stop for your own projects, live logs, favorites, and smart project detection.
 
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Platform: macOS 14+](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)
+![Swift 5](https://img.shields.io/badge/Swift-5-orange.svg)
+![UI: SwiftUI](https://img.shields.io/badge/UI-SwiftUI-1575F9.svg)
+![No dependencies](https://img.shields.io/badge/dependencies-none-success.svg)
+
+<!-- After the repo exists, replace <owner>/<repo> and uncomment these dynamic badges:
+![Latest release](https://img.shields.io/github/v/release/<owner>/<repo>?sort=semver)
+![Downloads](https://img.shields.io/github/downloads/<owner>/<repo>/total)
+![Stars](https://img.shields.io/github/stars/<owner>/<repo>?style=social)
+-->
+
+<!-- Add the hero screenshot here once captured (see docs/SCREENSHOTS.md):
+<img src="docs/images/hero.png" alt="IO: localhost showing local servers grouped by application" width="820">
+-->
+
 </div>
 
 ---
