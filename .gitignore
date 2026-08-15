@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Xcode SPM / Playgrounds
+.swiftpm/
+Packages/
+Package.resolved
+
+# Release artifacts
+*.zip
+*.dmg
+export/

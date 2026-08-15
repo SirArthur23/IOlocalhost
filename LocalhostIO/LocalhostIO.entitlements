@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  This app shells out to lsof, kill, npm, python3, etc. and inspects other
+	  processes, so it intentionally runs WITHOUT the App Sandbox. That is fine
+	  for a local developer utility you run yourself. If you ever want to ship it
+	  through the Mac App Store you would need to revisit this.
+	-->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+</dict>
+</plist>
