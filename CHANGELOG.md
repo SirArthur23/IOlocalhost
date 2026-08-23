@@ -26,3 +26,7 @@ First public release.
 - Backgrounding (`nohup … &`) start scripts are de-emphasized in favor of foreground
   `run_*` variants that IO can manage.
 - "Exited on launch — view log" badge when a just-started server dies quickly.
+- **Project-aware labels & favorites.** A saved label/favorite is now matched to the actual
+  project (by working directory), not just the port number — so a different app running on a
+  reused port (e.g. 3000) no longer inherits the wrong name or star, and Stop can't kill an
+  unrelated process that merely shares the port.

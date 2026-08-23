@@ -33,8 +33,8 @@ struct RunningServerRow: View {
     @State private var showStopConfirm = false
 
     private var category: ServerCategory { appState.category(for: server) }
-    private var customLabel: String? { appState.label(forPort: server.port) }
-    private var isFavorite: Bool { appState.isFavorite(port: server.port) }
+    private var customLabel: String? { appState.label(for: server) }
+    private var isFavorite: Bool { appState.isFavorite(for: server) }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -126,7 +126,7 @@ struct RunningServerRow: View {
         }
         .alert("Label for port \(String(server.port))", isPresented: $showLabelEditor) {
             TextField("e.g. My API server", text: $editingLabel)
-            Button("Save") { appState.setLabel(editingLabel, forPort: server.port) }
+            Button("Save") { appState.setLabel(editingLabel, for: server) }
             Button("Cancel", role: .cancel) { }
         }
         .confirmationDialog(
@@ -153,7 +153,7 @@ struct SavedServerRow: View {
     @State private var showLogs = false
     @State private var showConfigure = false
 
-    private var liveServer: RunningServer? { appState.runningServer(onPort: server.port) }
+    private var liveServer: RunningServer? { appState.runningInstance(of: server) }
     private var isRunning: Bool { liveServer != nil || appState.isManagedRunning(server) }
 
     var body: some View {
@@ -215,7 +215,7 @@ struct SavedServerRow: View {
             if isRunning {
                 Button(role: .destructive) {
                     if appState.isManagedRunning(server) { appState.stopManaged(server) }
-                    else { appState.stopPort(server.port) }
+                    else if let instance = liveServer { appState.stop(instance) }
                 } label: {
                     Label("Stop", systemImage: "stop.fill")
                 }

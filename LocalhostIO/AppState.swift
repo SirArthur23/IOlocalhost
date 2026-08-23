@@ -12,6 +12,9 @@ final class AppState: ObservableObject {
     @Published var logs: [UUID: String] = [:]
     /// Servers that exited unexpectedly shortly after we started them.
     @Published var recentlyExited: Set<UUID> = []
+    /// Working directory per running PID — used to match a saved bookmark to the
+    /// *actual* project rather than just the port number. Populated lazily.
+    @Published var processCWD: [Int32: String] = [:]
 
     private let store = Store()
     private let logStore = LogStore()
@@ -64,7 +67,36 @@ final class AppState: ObservableObject {
             await MainActor.run {
                 self.runningServers = servers
                 self.lastRefresh = .now
+                // Drop cwd cache entries for PIDs that are gone.
+                let alive = Set(servers.map(\.pid))
+                self.processCWD = self.processCWD.filter { alive.contains($0.key) }
+                self.refreshCWDsForBookmarkedPorts()
             }
+        }
+    }
+
+    /// Fetch the working directory for running processes whose port has a saved
+    /// bookmark, so we can tell whether the bookmark really belongs to it.
+    private func refreshCWDsForBookmarkedPorts() {
+        let pids = runningServers
+            .filter { bookmark(forPort: $0.port)?.folderPath != nil && processCWD[$0.pid] == nil }
+            .map(\.pid)
+        guard !pids.isEmpty else { return }
+        Task.detached(priority: .utility) {
+            var found: [Int32: String] = [:]
+            for pid in pids {
+                if let cwd = ProcessManager.workingDirectory(for: pid) { found[pid] = cwd }
+            }
+            await MainActor.run {
+                for (pid, cwd) in found { self.processCWD[pid] = cwd }
+            }
+        }
+    }
+
+    /// Ensure we know a running process's cwd (synchronous — for a user action).
+    private func ensureCWD(for running: RunningServer) {
+        if processCWD[running.pid] == nil {
+            processCWD[running.pid] = ProcessManager.workingDirectory(for: running.pid)
         }
     }
 
@@ -74,19 +106,49 @@ final class AppState: ObservableObject {
         savedServers.first { $0.port == port }
     }
 
-    /// The user-chosen label for a port, if any.
-    func label(forPort port: Int) -> String? {
-        guard let label = bookmark(forPort: port)?.label, !label.isEmpty else { return nil }
-        return label
-    }
-
-    func isFavorite(port: Int) -> Bool {
-        bookmark(forPort: port)?.isFavorite ?? false
-    }
-
     /// The live server currently listening on a port, if any.
     func runningServer(onPort port: Int) -> RunningServer? {
         runningServers.first { $0.port == port }
+    }
+
+    // MARK: - Project-aware matching (so a reused port doesn't inherit a stale label)
+
+    /// The saved bookmark that truly corresponds to a running process. Prefers a
+    /// working-directory match; only falls back to a pure port label (a bookmark
+    /// with no folder). A launchable bookmark on the same port but a *different*
+    /// folder is intentionally NOT matched.
+    func bookmark(for running: RunningServer) -> SavedServer? {
+        if let cwd = processCWD[running.pid],
+           let byFolder = savedServers.first(where: { $0.folderPath == cwd }) {
+            return byFolder
+        }
+        if let byPort = bookmark(forPort: running.port), byPort.folderPath == nil {
+            return byPort
+        }
+        return nil
+    }
+
+    /// The user-chosen label for a specific running process, if any.
+    func label(for running: RunningServer) -> String? {
+        guard let label = bookmark(for: running)?.label, !label.isEmpty else { return nil }
+        return label
+    }
+
+    func isFavorite(for running: RunningServer) -> Bool {
+        bookmark(for: running)?.isFavorite ?? false
+    }
+
+    /// The running process that actually belongs to a saved server (matching by
+    /// folder when known, else by port for a plain port bookmark).
+    func runningInstance(of server: SavedServer) -> RunningServer? {
+        runningServers.first { running in
+            guard running.port == server.port else { return false }
+            if let folder = server.folderPath {
+                // Only a confirmed cwd match counts; unknown cwd = don't claim it.
+                return processCWD[running.pid] == folder
+            }
+            return true   // plain port bookmark
+        }
     }
 
     func category(for server: RunningServer) -> ServerCategory {
@@ -101,43 +163,34 @@ final class AppState: ObservableObject {
         scheduleRefresh(after: 0.8)
     }
 
-    /// Stop whatever is listening on a port (used from the Favorites view).
-    func stopPort(_ port: Int) {
-        guard let server = runningServer(onPort: port) else { return }
-        stop(server)
-    }
+    // MARK: - Labels & favorites (project-aware, for discovered servers)
 
-    // MARK: - Labels & favorites (by port, for discovered servers)
-
-    func setLabel(_ label: String, forPort port: Int) {
+    /// Set a custom label on a specific running process (project-aware, so a
+    /// different app on the same port gets its own bookmark).
+    func setLabel(_ label: String, for running: RunningServer) {
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        if var b = bookmark(forPort: port) {
+        ensureCWD(for: running)
+        if var b = bookmark(for: running) {
             b.label = trimmed
             upsert(b)
         } else {
-            upsert(SavedServer(label: trimmed, port: port))
-        }
-    }
-
-    func toggleFavorite(forPort port: Int, fallbackLabel: String) {
-        if var b = bookmark(forPort: port) {
-            b.isFavorite.toggle()
-            upsert(b)
-        } else {
-            upsert(SavedServer(label: fallbackLabel, port: port, isFavorite: true))
+            upsert(SavedServer(label: trimmed, port: running.port,
+                               folderPath: processCWD[running.pid]))
         }
     }
 
     /// Favorite a *discovered* running server, capturing how to relaunch it
     /// (working directory + command) while the process is still alive.
     func toggleFavorite(for running: RunningServer) {
-        let fallbackLabel = label(forPort: running.port) ?? "localhost:\(running.port)"
-        if var b = bookmark(forPort: running.port) {
+        ensureCWD(for: running)
+        if var b = bookmark(for: running) {
             b.isFavorite.toggle()
             if b.isFavorite { captureLaunchInfo(&b, from: running) }
             upsert(b)
         } else {
-            var b = SavedServer(label: fallbackLabel, port: running.port, isFavorite: true)
+            let fallbackLabel = label(for: running) ?? "localhost:\(running.port)"
+            var b = SavedServer(label: fallbackLabel, port: running.port,
+                                isFavorite: true, folderPath: processCWD[running.pid])
             captureLaunchInfo(&b, from: running)
             upsert(b)
         }
@@ -228,8 +281,9 @@ final class AppState: ObservableObject {
     func stopManaged(_ server: SavedServer) {
         intentionallyStopping.insert(server.id)   // so onExit isn't flagged as a failure
         launcher.stop(server.id)
-        // Also stop anything still listening on that port that we didn't track.
-        stopPort(server.port)
+        // Also stop this project's own listener if it lingers — but never an
+        // unrelated process that merely reuses the same port.
+        if let instance = runningInstance(of: server) { stop(instance) }
         scheduleRefresh(after: 0.8)
     }
 
