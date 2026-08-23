@@ -30,3 +30,6 @@ First public release.
   project (by working directory), not just the port number — so a different app running on a
   reused port (e.g. 3000) no longer inherits the wrong name or star, and Stop can't kill an
   unrelated process that merely shares the port.
+- **Self-healing favorites.** Saved servers reconcile automatically: duplicate bookmarks for
+  the same project folder are folded into one, and a project's stored port is refreshed to
+  wherever it's actually running (so a project that moved ports shows the right state and URL).

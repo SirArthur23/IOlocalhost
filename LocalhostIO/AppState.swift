@@ -51,6 +51,7 @@ final class AppState: ObservableObject {
     init() {
         savedServers = store.load()
         logs = logStore.loadAll()   // restore logs from previous sessions
+        reconcile()                 // fold any persisted duplicate bookmarks
         refreshRunning()
         startAutoRefresh()
     }
@@ -70,16 +71,18 @@ final class AppState: ObservableObject {
                 // Drop cwd cache entries for PIDs that are gone.
                 let alive = Set(servers.map(\.pid))
                 self.processCWD = self.processCWD.filter { alive.contains($0.key) }
-                self.refreshCWDsForBookmarkedPorts()
+                self.refreshCWDs()
+                self.reconcile()
             }
         }
     }
 
-    /// Fetch the working directory for running processes whose port has a saved
-    /// bookmark, so we can tell whether the bookmark really belongs to it.
-    private func refreshCWDsForBookmarkedPorts() {
+    /// Fetch the working directory for dev / bookmarked processes so we can match
+    /// a saved project to the process actually running it — even on a new port.
+    private func refreshCWDs() {
         let pids = runningServers
-            .filter { bookmark(forPort: $0.port)?.folderPath != nil && processCWD[$0.pid] == nil }
+            .filter { processCWD[$0.pid] == nil
+                && (category(for: $0) == .dev || bookmark(forPort: $0.port) != nil) }
             .map(\.pid)
         guard !pids.isEmpty else { return }
         Task.detached(priority: .utility) {
@@ -89,8 +92,57 @@ final class AppState: ObservableObject {
             }
             await MainActor.run {
                 for (pid, cwd) in found { self.processCWD[pid] = cwd }
+                self.reconcile()   // new cwds may reveal a project's real port
             }
         }
+    }
+
+    /// Keep saved servers tidy: fold duplicate bookmarks that point at the same
+    /// project folder into one, and refresh a project's stored port to wherever
+    /// it's actually running.
+    private func reconcile() {
+        var changed = false
+
+        // 1) Merge duplicates by project folder.
+        var keptByFolder: [String: Int] = [:]
+        var dropIDs: Set<UUID> = []
+        for idx in savedServers.indices {
+            guard let folder = savedServers[idx].folderPath else { continue }
+            if let keepIdx = keptByFolder[folder] {
+                var keep = savedServers[keepIdx]
+                let dupe = savedServers[idx]
+                keep.isFavorite = keep.isFavorite || dupe.isFavorite
+                if dupe.lastUsed > keep.lastUsed {
+                    keep.label = dupe.label.isEmpty ? keep.label : dupe.label
+                    keep.method = dupe.method
+                    keep.customCommand = dupe.customCommand
+                    keep.port = dupe.port
+                    keep.lastUsed = dupe.lastUsed
+                } else if keep.label.isEmpty {
+                    keep.label = dupe.label
+                }
+                savedServers[keepIdx] = keep
+                dropIDs.insert(dupe.id)
+                changed = true
+            } else {
+                keptByFolder[folder] = idx
+            }
+        }
+        if !dropIDs.isEmpty {
+            savedServers.removeAll { dropIDs.contains($0.id) }
+            for id in dropIDs { logStore.delete(id); logs[id] = nil }
+        }
+
+        // 2) Refresh stored port to the project's live port.
+        for idx in savedServers.indices {
+            guard savedServers[idx].folderPath != nil,
+                  let instance = runningInstance(of: savedServers[idx]),
+                  instance.port != savedServers[idx].port else { continue }
+            savedServers[idx].port = instance.port
+            changed = true
+        }
+
+        if changed { store.save(savedServers) }
     }
 
     /// Ensure we know a running process's cwd (synchronous — for a user action).
@@ -138,17 +190,14 @@ final class AppState: ObservableObject {
         bookmark(for: running)?.isFavorite ?? false
     }
 
-    /// The running process that actually belongs to a saved server (matching by
-    /// folder when known, else by port for a plain port bookmark).
+    /// The running process that actually belongs to a saved server. A project is
+    /// matched by its working directory *wherever* it's running (it may have moved
+    /// ports); a plain port bookmark (no folder) matches by port.
     func runningInstance(of server: SavedServer) -> RunningServer? {
-        runningServers.first { running in
-            guard running.port == server.port else { return false }
-            if let folder = server.folderPath {
-                // Only a confirmed cwd match counts; unknown cwd = don't claim it.
-                return processCWD[running.pid] == folder
-            }
-            return true   // plain port bookmark
+        if let folder = server.folderPath {
+            return runningServers.first { processCWD[$0.pid] == folder }
         }
+        return runningServers.first { $0.port == server.port }
     }
 
     func category(for server: RunningServer) -> ServerCategory {
