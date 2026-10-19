@@ -21,7 +21,7 @@ lift engagement a lot on both platforms.
 >
 > It's free, open source (MIT), and runs entirely on your machine — no telemetry, no network.
 >
-> Grab it here 👉 https://github.com/SirArthur23/localhostIO
+> Grab it here 👉 https://github.com/SirArthur23/IOlocalhost
 >
 > Would love feedback from anyone juggling a lot of localhost servers.
 >
@@ -32,7 +32,7 @@ lift engagement a lot on both platforms.
 > New little macOS app: **IO: localhost**. See every dev server running on a local port,
 > grouped and labeled, and start/stop your own projects with one click — it auto-detects the
 > framework and package manager for you. Free, open source, no telemetry.
-> https://github.com/SirArthur23/localhostIO #macOS #DeveloperTools #OpenSource
+> https://github.com/SirArthur23/IOlocalhost #macOS #DeveloperTools #OpenSource
 
 ---
 
@@ -44,7 +44,7 @@ lift engagement a lot on both platforms.
 > See every dev server on a local port — grouped, labeled, safe to stop. Point it at a folder
 > and it detects the framework + package manager and starts it (pnpm dev, ghost run, django…).
 > Free & open source, no telemetry.
-> https://github.com/SirArthur23/localhostIO
+> https://github.com/SirArthur23/IOlocalhost
 
 **Option B — punchy**
 
@@ -52,7 +52,7 @@ lift engagement a lot on both platforms.
 > IO: localhost answers that. Every local port, grouped by app and color-coded so you don't
 > kill the wrong thing. Auto-detects & starts your projects with live logs. macOS, free,
 > open source.
-> https://github.com/SirArthur23/localhostIO
+> https://github.com/SirArthur23/IOlocalhost
 
 ---
 

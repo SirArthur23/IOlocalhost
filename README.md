@@ -12,9 +12,9 @@ start/stop for your own projects, live logs, favorites, and smart project detect
 ![Swift 5](https://img.shields.io/badge/Swift-5-orange.svg)
 ![UI: SwiftUI](https://img.shields.io/badge/UI-SwiftUI-1575F9.svg)
 ![No dependencies](https://img.shields.io/badge/dependencies-none-success.svg)
-![Latest release](https://img.shields.io/github/v/release/SirArthur23/localhostIO?sort=semver)
-![Downloads](https://img.shields.io/github/downloads/SirArthur23/localhostIO/total)
-![Stars](https://img.shields.io/github/stars/SirArthur23/localhostIO?style=social)
+![Latest release](https://img.shields.io/github/v/release/SirArthur23/IOlocalhost?sort=semver)
+![Downloads](https://img.shields.io/github/downloads/SirArthur23/IOlocalhost/total)
+![Stars](https://img.shields.io/github/stars/SirArthur23/IOlocalhost?style=social)
 
 <!-- Add the hero screenshot here once captured (see docs/SCREENSHOTS.md):
 <img src="docs/images/hero.png" alt="IO: localhost showing local servers grouped by application" width="820">
@@ -73,7 +73,7 @@ plain static sites. Anything else → a prefilled, editable custom command.
 > not collect or transmit any data.
 
 ### From a release build
-1. Download the latest `IO-localhost.zip` from the [Releases](https://github.com/SirArthur23/localhostIO/releases) page.
+1. Download the latest `IO-localhost.zip` from the [Releases](https://github.com/SirArthur23/IOlocalhost/releases) page.
 2. Move **IO: localhost.app** to your Applications folder.
 3. Launch it. *(If macOS warns about an unidentified developer, right-click the app →
    **Open** → **Open**. See [the manual](MANUAL.md#first-launch--gatekeeper).)*
