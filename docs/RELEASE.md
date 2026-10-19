@@ -78,10 +78,10 @@ Once notarized, a cask makes install a one-liner. Sketch:
 cask "io-localhost" do
   version "1.0.0"
   sha256 "…"
-  url "https://github.com/<you>/localhostIO/releases/download/v#{version}/IO-localhost.zip"
+  url "https://github.com/SirArthur23/localhostIO/releases/download/v#{version}/IO-localhost.zip"
   name "IO: localhost"
   desc "See and manage your local dev servers"
-  homepage "https://github.com/<you>/localhostIO"
+  homepage "https://github.com/SirArthur23/localhostIO"
   app "IO: localhost.app"
 end
 ```
